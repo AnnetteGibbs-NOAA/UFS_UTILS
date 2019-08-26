@@ -1356,10 +1356,10 @@
       lsnow = nint(snowxy_target_ptr(i,j))
       lsnow = abs(lsnow)
       tot_liq_equiv = 0.0
-      do k = 1, lsnow
+      do k = 1, 3
         tot_liq_equiv = tot_liq_equiv + snicexy_target_ptr(i,j,k) + snliqxy_target_ptr(i,j,k)
       enddo
-      if (localpet == 10 .and. i == 130 .and. j == 96) then
+      if (localpet == 3 .and. i == 400 .and. j == 665) then
         print*,'%lsnow ',lsnow
         print*,'%snicexy ', snicexy_target_ptr(i,j,:)
         print*,'%snliqxy ', snliqxy_target_ptr(i,j,:)
@@ -1373,23 +1373,23 @@
 ! ensure noah snow exists and is deep.
         if (snow_liq_equiv_target_ptr(i,j) < 100.) snow_liq_equiv_target_ptr(i,j)=100.
         if (snow_depth_target_ptr(i,j) < 1000.) snow_depth_target_ptr(i,j)=1000.
-        do k = 1, lsnow
+        do k = 1, 3
           percent_snow(k) = (snliqxy_target_ptr(i,j,k) + snicexy_target_ptr(i,j,k)) / tot_liq_equiv
         enddo
       endif
-      if (localpet == 10 .and. i == 130 .and. j == 96) then
+      if (localpet == 3 .and. i == 400 .and. j == 665) then
         print*,'%percent_snow ',percent_snow(:)*100.
       endif
       snliqxy_target_ptr(i,j,:) = 0.0  ! snow pack totally frozen at glacial points
       snicexy_target_ptr(i,j,:) = 0.0
       sneqv_target_ptr(i,j) = snow_liq_equiv_target_ptr(i,j)
-      do k = 1, lsnow
+      do k = 1, 3
         if(percent_snow(k) > 0.0) then
           snicexy_target_ptr(i,j,k) = percent_snow(k) * snow_liq_equiv_target_ptr(i,j)
           zsnsoxy_target_ptr(i,j,k) = percent_snow(k) * snow_depth_target_ptr(i,j) * 0.001
         endif
       enddo
-      if (localpet == 10 .and. i == 130 .and. j == 96) then
+      if (localpet == 3 .and. i == 400 .and. j == 665) then
         print*,'%zsnsoxy before ', zsnsoxy_target_ptr(i,j,1:3)
       endif
       zsnsoxy_target_ptr(i,j,1) = -(zsnsoxy_target_ptr(i,j,1))
@@ -1399,7 +1399,7 @@
       zsnsoxy_target_ptr(i,j,5) = zsnsoxy_target_ptr(i,j,3) - 0.4
       zsnsoxy_target_ptr(i,j,6) = zsnsoxy_target_ptr(i,j,3) - 1.0
       zsnsoxy_target_ptr(i,j,7) = zsnsoxy_target_ptr(i,j,3) - 2.0
-      if (localpet == 10 .and. i == 130 .and. j == 96) then
+      if (localpet == 3 .and. i == 400 .and. j == 665) then
         print*,'%noah snow ', snow_liq_equiv_target_ptr(i,j)
         print*,'%snicexy after ', snicexy_target_ptr(i,j,:)
         print*,'%zsnsoxy after ', zsnsoxy_target_ptr(i,j,:)
@@ -1432,11 +1432,24 @@
      soil_temp_target_ptr(i,j,:) = stcxy_target_ptr(i,j,:)
    endif
 
-! Noah snow is used at sea ice.  At land/ocean set to missing value.
+! Noah snow is used at sea ice.  At ocean set noah to zero.
+! At land, set noah to noahmp value (sum up all three layers).
 
-   if (landmask_target_ptr(i,j) /= 2) then
-     snow_depth_target_ptr(i,j) = 9.99E+20
-     snow_liq_equiv_target_ptr(i,j) = 9.99E+20
+   if (landmask_target_ptr(i,j) == 0) then
+     snow_depth_target_ptr(i,j) = 0.0
+     snow_liq_equiv_target_ptr(i,j) = 0.0
+   elseif (landmask_target_ptr(i,j) == 1) then
+     snow_depth_target_ptr(i,j) = -(zsnsoxy_target_ptr(i,j,3)) *1000. ! total depth store in '3'
+     snow_liq_equiv_target_ptr(i,j) =  snliqxy_target_ptr(i,j,1) + snliqxy_target_ptr(i,j,2) + &
+                                       snliqxy_target_ptr(i,j,3) + snicexy_target_ptr(i,j,1) + &
+                                       snicexy_target_ptr(i,j,2) + snicexy_target_ptr(i,j,3)
+     if (snow_depth_target_ptr(i,j) < 0.0) then
+       print*,'warning negative snow depth ',localpet, i,j,snow_depth_target_ptr(i,j),snow_liq_equiv_target_ptr(i,j)
+     endif
+     if (snow_liq_equiv_target_ptr(i,j) < 0.0) then
+       print*,'warning negative weasd ',localpet, i,j,snow_depth_target_ptr(i,j),snow_liq_equiv_target_ptr(i,j)
+     endif
+
    endif
 
  enddo
