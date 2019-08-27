@@ -377,6 +377,7 @@
  real(esmf_kind_r8), pointer         :: soil_temp_target_ptr(:,:,:)
  real(esmf_kind_r8), pointer         :: snow_liq_equiv_target_ptr(:,:)
  real(esmf_kind_r8), pointer         :: snow_depth_target_ptr(:,:)
+ real(esmf_kind_r8), pointer         :: tsnoxy_target_ptr(:,:,:)
  real(esmf_kind_r8), pointer         :: zsnsoxy_target_ptr(:,:,:)
 
  integer(esmf_kind_i8), allocatable  :: mask_target_one_tile(:,:)
@@ -1320,6 +1321,12 @@
  if(ESMF_logFoundError(rcToCheck=rc,msg=ESMF_LOGERR_PASSTHRU,line=__line__,file=__file__)) &
       call error_handler("IN FieldGet", rc)
 
+ print*,"- CALL FieldGet FOR TARGET tsnoxy."
+ call ESMF_FieldGet(tsnoxy_target_grid, &
+                    farrayPtr=tsnoxy_target_ptr, rc=rc)
+ if(ESMF_logFoundError(rcToCheck=rc,msg=ESMF_LOGERR_PASSTHRU,line=__line__,file=__file__)) &
+      call error_handler("IN FieldGet", rc)
+
 ! When using HRLDAS data, set soil moisture to nominal value at land ice.
 ! HRLDAS has flag values at land ice.
 
@@ -1454,6 +1461,36 @@
 
  enddo
  enddo
+
+! Ensure the snow temperature has valid values for each snow layer.  For non-layers, set to
+! missing flag.
+
+   do j = clb(2), cub(2)
+   do i = clb(1), cub(1)
+
+     if (landmask_target_ptr(i,j) == 1) then
+
+       lsnow = nint(snowxy_target_ptr(i,j))
+       lsnow = abs(lsnow)
+
+       if (lsnow == 1) then
+         if (tsnoxy_target_ptr(i,j,3) < -9999.) tsnoxy_target_ptr(i,j,3) = 270.0
+         tsnoxy_target_ptr(i,j,2) = -99999.
+         tsnoxy_target_ptr(i,j,1) = -99999.
+       elseif (lsnow == 2) then
+         if (tsnoxy_target_ptr(i,j,3) < -9999.) tsnoxy_target_ptr(i,j,3) = 270.0
+         if (tsnoxy_target_ptr(i,j,2) < -9999.) tsnoxy_target_ptr(i,j,2) = tsnoxy_target_ptr(i,j,3)
+         tsnoxy_target_ptr(i,j,1) = -99999.
+       elseif (lsnow == 3) then
+         if (tsnoxy_target_ptr(i,j,3) < -9999.) tsnoxy_target_ptr(i,j,3) = 270.0
+         if (tsnoxy_target_ptr(i,j,2) < -9999.) tsnoxy_target_ptr(i,j,2) = tsnoxy_target_ptr(i,j,3)
+         if (tsnoxy_target_ptr(i,j,1) < -9999.) tsnoxy_target_ptr(i,j,1) = tsnoxy_target_ptr(i,j,2)
+       endif
+
+     endif
+
+   enddo
+   enddo
 
  print*,'bottom of interp_noahmp'
 

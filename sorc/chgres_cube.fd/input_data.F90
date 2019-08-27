@@ -1091,6 +1091,8 @@
      call netcdf_err(error, 'reading field id' )
      error=nf90_get_var(ncid, id_var, dummy3d)
      call netcdf_err(error, 'reading field' )
+! for consistency, use same missing flag as lis.
+     where (dummy3d < 1.) dummy3d = -99999.
      print*,'tsnoxy ',maxval(dummy3d),minval(dummy3d)
      do i = 1, i_input_noahmp
      do j = 1, j_input_noahmp
