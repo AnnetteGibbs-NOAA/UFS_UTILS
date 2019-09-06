@@ -337,6 +337,8 @@
  real(esmf_kind_r8), pointer     :: landmask_input_ptr(:,:)
  integer(esmf_kind_i8), pointer     :: landmask_target_ptr(:,:)
 
+ logical :: bad_snow
+
  integer                             :: lsnow
  real                                :: percent_snow(3)
  real                                :: tot_liq_equiv
@@ -1491,6 +1493,68 @@
 
    enddo
    enddo
+
+!------------------------------------------------------------------------------------------
+! When using LIS, there were a few points with mismatches between the number of
+! snow layers (snowxy) and the layered snow depth (zsnsoxy).  Don't know if this
+! is the result of bad LIS data or how chgres is interpolating these fields.  It does not
+! happen with all cases.  But mismatches will cause the forecast model to break.
+! For now, set a check for mismatches.  If one exists, remove all snow.
+!------------------------------------------------------------------------------------------
+
+ if (noahmp_lis) then
+ do j = clb(2), cub(2)
+ do i = clb(1), cub(1)
+
+   if (landmask_target_ptr(i,j) == 1) then
+
+     lsnow = nint(snowxy_target_ptr(i,j))
+     lsnow = abs(lsnow)
+
+     bad_snow = .false.
+       if (lsnow == 1) then
+         if (zsnsoxy_target_ptr(i,j,3)  == 0.0) then
+           print*,'bad zsnsoxy when 1 layer ',localpet, i,j,zsnsoxy_target_ptr(i,j,:), &
+             snicexy_target_ptr(i,j,:), snliqxy_target_ptr(i,j,:)
+           bad_snow=.true.
+         endif
+       elseif (lsnow == 2) then
+         if (zsnsoxy_target_ptr(i,j,2)  == 0.0 .or. zsnsoxy_target_ptr(i,j,3)  == 0.0) then
+           print*,'bad zsnsoxy when 2 layer ',localpet, i,j,zsnsoxy_target_ptr(i,j,:), &
+             snicexy_target_ptr(i,j,:), snliqxy_target_ptr(i,j,:)
+           bad_snow=.true.
+         endif
+       elseif (lsnow == 3) then
+         if (zsnsoxy_target_ptr(i,j,1)  == 0.0 .or. zsnsoxy_target_ptr(i,j,2)  == 0.0 .or. zsnsoxy_target_ptr(i,j,3)  == 0.0) then
+           print*,'bad zsnsoxy when 3 layer ',localpet, i,j,zsnsoxy_target_ptr(i,j,:), &
+             snicexy_target_ptr(i,j,:), snliqxy_target_ptr(i,j,:)
+           bad_snow=.true.
+         endif
+       elseif (lsnow == 0) then
+         if (zsnsoxy_target_ptr(i,j,1) /= 0.0 .or. zsnsoxy_target_ptr(i,j,2) /= 0.0 .or. zsnsoxy_target_ptr(i,j,3)  /= 0.0) then
+           print*,'bad zsnsoxy when 0 layer ',localpet, i,j,zsnsoxy_target_ptr(i,j,:), &
+             snicexy_target_ptr(i,j,:), snliqxy_target_ptr(i,j,:)
+           bad_snow=.true.
+         endif
+       endif
+
+       if (bad_snow) then
+          snowxy_target_ptr(i,j) = 0
+          snicexy_target_ptr(i,j,:) = 0.0 
+          snliqxy_target_ptr(i,j,:) = 0.0 
+          zsnsoxy_target_ptr(i,j,1:3) = 0.0
+          zsnsoxy_target_ptr(i,j,4) = -0.1
+          zsnsoxy_target_ptr(i,j,5) = -0.4
+          zsnsoxy_target_ptr(i,j,6) = -1.0
+          zsnsoxy_target_ptr(i,j,7) = -2.0
+          tsnoxy_target_ptr(i,j,:) = -99999.
+       endif
+
+   endif
+
+ enddo
+ enddo
+ endif
 
  print*,'bottom of interp_noahmp'
 
