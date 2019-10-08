@@ -384,6 +384,7 @@
 
  integer(esmf_kind_i8), allocatable  :: mask_target_one_tile(:,:)
  real(esmf_kind_r8), allocatable    :: data_one_tile(:,:)
+ real(esmf_kind_r8)                 :: snod
 
  type(esmf_regridmethod_flag)        :: method
  type(esmf_routehandle)              :: regrid_nolandice, regrid_all_land
@@ -1329,6 +1330,12 @@
  if(ESMF_logFoundError(rcToCheck=rc,msg=ESMF_LOGERR_PASSTHRU,line=__line__,file=__file__)) &
       call error_handler("IN FieldGet", rc)
 
+ print*,"- CALL FieldGet FOR TARGET tgxy."
+ call ESMF_FieldGet(tgxy_target_grid, &
+                    farrayPtr=tgxy_target_ptr, rc=rc)
+ if(ESMF_logFoundError(rcToCheck=rc,msg=ESMF_LOGERR_PASSTHRU,line=__line__,file=__file__)) &
+      call error_handler("IN FieldGet", rc)
+
 ! When using HRLDAS data, set soil moisture to nominal value at land ice.
 ! HRLDAS has flag values at land ice.
 
@@ -1421,6 +1428,75 @@
 
  endif ! is data lis?
 
+! replace noahmp snow with noah snow.
+
+ if (noahmp_hrldas) then
+
+   do j = clb(2), cub(2)
+   do i = clb(1), cub(1)
+
+   if (landmask_target_ptr(i,j) == 1) then
+
+     if (snow_liq_equiv_target_ptr(i,j) > 0.0 .and. snow_depth_target_ptr(i,j) == 0.0) then
+        snow_depth_target_ptr(i,j)=snow_liq_equiv_target_ptr(i,j)*10.
+     endif
+
+     snod = snow_depth_target_ptr(i,j) / 1000.0  ! convert to meters
+
+! set snow to zero.
+     snowxy_target_ptr(i,j) = 0.0
+     snicexy_target_ptr(i,j,:) = 0.0
+     snliqxy_target_ptr(i,j,:) = 0.0
+     tsnoxy_target_ptr(i,j,:) = -99999.
+     zsnsoxy_target_ptr(i,j,1) = 0.0
+     zsnsoxy_target_ptr(i,j,2) = 0.0
+     zsnsoxy_target_ptr(i,j,3) = 0.0
+
+     if (snod >= 0.025 .and. snod <=0.05) then 
+       snowxy_target_ptr(i,j) = -1.0
+       zsnsoxy_target_ptr(i,j,3) = snod
+     elseif (snod > 0.05 .and. snod <=0.1) then 
+       snowxy_target_ptr(i,j) = -2.0
+       zsnsoxy_target_ptr(i,j,2) = snod * 0.5
+       zsnsoxy_target_ptr(i,j,3) = snod * 0.5
+     elseif (snod > 0.1 .and. snod <=0.25) then 
+       snowxy_target_ptr(i,j) = -2.0
+       zsnsoxy_target_ptr(i,j,2) = 0.05
+       zsnsoxy_target_ptr(i,j,3) = snod - 0.05
+     elseif (snod > 0.25 .and. snod <=0.45) then 
+       snowxy_target_ptr(i,j) = -3.0
+       zsnsoxy_target_ptr(i,j,1) = 0.05
+       zsnsoxy_target_ptr(i,j,2) = 0.5 * (snod - 0.05)
+       zsnsoxy_target_ptr(i,j,3) = 0.5 * (snod - 0.05)
+     elseif (snod > 0.45) then 
+       snowxy_target_ptr(i,j) = -3.0
+       zsnsoxy_target_ptr(i,j,1) = 0.05
+       zsnsoxy_target_ptr(i,j,2) = 0.2
+       zsnsoxy_target_ptr(i,j,3) = snod - 0.05 - 0.2
+     endif
+
+      do k = 1, 3
+        if (zsnsoxy_target_ptr(i,j,k) > 0.0) then
+          snicexy_target_ptr(i,j,k) = zsnsoxy_target_ptr(i,j,k) * (snow_liq_equiv_target_ptr(i,j)/snow_depth_target_ptr(i,j))
+          snicexy_target_ptr(i,j,k) = snicexy_target_ptr(i,j,k) * 1000.  ! to mm
+          tsnoxy_target_ptr(i,j,k) = min(tgxy_target_ptr(i,j),270.0) 
+        endif
+      enddo
+
+      zsnsoxy_target_ptr(i,j,1) = -(zsnsoxy_target_ptr(i,j,1))
+      zsnsoxy_target_ptr(i,j,2) = zsnsoxy_target_ptr(i,j,1) - zsnsoxy_target_ptr(i,j,2)
+      zsnsoxy_target_ptr(i,j,3) = zsnsoxy_target_ptr(i,j,2) - zsnsoxy_target_ptr(i,j,3)
+      zsnsoxy_target_ptr(i,j,4) = zsnsoxy_target_ptr(i,j,3) - 0.1
+      zsnsoxy_target_ptr(i,j,5) = zsnsoxy_target_ptr(i,j,3) - 0.4
+      zsnsoxy_target_ptr(i,j,6) = zsnsoxy_target_ptr(i,j,3) - 1.0
+      zsnsoxy_target_ptr(i,j,7) = zsnsoxy_target_ptr(i,j,3) - 2.0
+
+   endif  ! is land?
+   enddo
+   enddo
+
+ endif  ! adjust snow for hrldas
+
  do j = clb(2), cub(2)
  do i = clb(1), cub(1)
 
@@ -1448,6 +1524,7 @@
      snow_depth_target_ptr(i,j) = 0.0
      snow_liq_equiv_target_ptr(i,j) = 0.0
    elseif (landmask_target_ptr(i,j) == 1) then
+     if(noahmp_lis) then
      snow_depth_target_ptr(i,j) = -(zsnsoxy_target_ptr(i,j,3)) *1000. ! total depth store in '3'
      snow_liq_equiv_target_ptr(i,j) =  snliqxy_target_ptr(i,j,1) + snliqxy_target_ptr(i,j,2) + &
                                        snliqxy_target_ptr(i,j,3) + snicexy_target_ptr(i,j,1) + &
@@ -1458,7 +1535,7 @@
      if (snow_liq_equiv_target_ptr(i,j) < 0.0) then
        print*,'warning negative weasd ',localpet, i,j,snow_depth_target_ptr(i,j),snow_liq_equiv_target_ptr(i,j)
      endif
-
+     endif ! is lis?
    endif
 
  enddo
