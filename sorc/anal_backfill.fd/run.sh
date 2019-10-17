@@ -9,7 +9,7 @@
 #SBATCH -e log
 #SBATCH --nodes=1
 #SBATCH -q debug
-#SBATCH -t 00:05:00
+#SBATCH -t 00:03:00
 
 set -x
 
@@ -26,7 +26,14 @@ rm -fr $WORK
 mkdir -p $WORK
 cd $WORK
 
-export OMP_NUM_THREADS=1
+export OMP_NUM_THREADS=8
+
+cat << EOF > ./fort.43
+ &setup
+  lon_out = 1536
+  lat_out = 768
+ /
+EOF
 
 /scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/UFS_UTILS/sorc/anal_backfill.fd/a.out
 

@@ -15,7 +15,8 @@ module load w3nco/2.0.7
 module list
 
 export FCOMP=ifort
-export FFLAGS="-O0 -I${NETCDF}/include -check bounds -warn unused -qopenmp"
+#export FFLAGS="-O0 -I${NETCDF}/include -check bounds -warn unused -qopenmp"
+export FFLAGS="-O3 -I${NETCDF}/include -fp-model strict -qopenmp"
 export NETCDF_LDFLAGS_F="-L${NETCDF}/lib -lnetcdf -lnetcdff -L${HDF5}/lib -lhdf5 -lhdf5_fortran"
 
 

@@ -1,5 +1,24 @@
  program test
 
+!---------------------------------------------------------------------
+!
+! Read a gaussian atmospheric increment file in netcdf.  Interpolate
+! all fields to another gaussian resolution.  Output the result
+! in another netcdf file.
+!
+! Input files:
+! -----------
+!
+! Output files:
+! ------------
+!
+! Namelist variables:
+! ------------------
+!
+! 2019-10-24        Initial version.
+!
+!---------------------------------------------------------------------
+
  use netcdf
 
  implicit none
@@ -43,6 +62,8 @@
  data records /'u_inc', 'v_inc', 'delp_inc', 'delz_inc', 'T_inc', &
                'sphum_inc', 'liq_wat_inc', 'o3mr_inc', 'icmr_inc' /
 
+ namelist /setup/ lon_out, lat_out
+
 !-----------------------------------------------------------------
 ! Open and create output file records.  These will be filled
 ! with data below.
@@ -50,8 +71,17 @@
 
  call w3tagb('TEST', 2019, 100, 0, 'EMC')
 
- lon_out=1536
- lat_out=768
+ print*,'- READ SETUP NAMELIST'
+ open (43, file="./fort.43")
+ read (43, nml=setup, iostat=error)
+ if (error /= 0) then
+   print*,"- FATAL ERROR READING NAMELIST. ISTAT IS: ", error
+   stop 44
+ endif
+ close (43)
+
+ print*,"- WILL INTERPOLATE TO GAUSSIAN GRID OF DIMENSION ",lon_out, lat_out
+
  lev=127
  ilev=128
 
