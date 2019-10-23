@@ -32,9 +32,13 @@ cat << EOF > ./fort.43
  &setup
   lon_out = 1536
   lat_out = 768
+  outfile = "./out.nc"
+  infile = "/scratch2/NCEPDEV/stmp1/Cory.R.Martin/GFSv16_ncio/gfs.20190612/00/gfs.t00z.atminc.nc"
+  lev = 127
  /
 EOF
 
-/scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/UFS_UTILS/sorc/anal_backfill.fd/a.out
+#/scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/UFS_UTILS/sorc/anal_backfill.fd/a.out
+/scratch2/NCEPDEV/stmp1/George.Gayno/ProdGSI/bin/interp_inc.x
 
 exit
