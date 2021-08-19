@@ -328,10 +328,11 @@
  INTEGER             :: IDUM(IDIM,JDIM)
  integer             :: num_parthds, num_threads
 
- logical             :: lake(lensfc)
- real(kind=kind_io8) :: min_lakeice, min_seaice
+ logical             :: frac_grid
+ real(kind=kind_io8) :: min_seaice, min_lakeice, min_ice(lensfc)
 
  REAL                :: SLMASK(LENSFC), OROG(LENSFC)
+ REAL                :: SLMSKL(LENSFC), SLMSKW(LENSFC)
  REAL                :: SIHFCS(LENSFC), SICFCS(LENSFC)
  REAL                :: SITFCS(LENSFC), TSFFCS(LENSFC)
  REAL                :: SNOFCS(LENSFC), ZORFCS(LENSFC)
@@ -482,16 +483,36 @@ ENDIF
 ! UPDATE SURFACE FIELDS.
 !--------------------------------------------------------------------------------
 
+ frac_grid = .false.
+
  IF (DO_SFCCYCLE) THEN
    num_threads = num_parthds()
-   lake = .false.
+   IF (FRAC_GRID) THEN
+     print*,'frac grid not yet. '
+     stop 33
+   ELSE
+
+     DO I=1,LENSFC
+       IF (NINT(SLMASK(I)) == 1) THEN
+         SLMSKL(I) = 1.0_8
+         SLMSKW(I) = 1.0_8
+       ELSE
+         SLMSKL(I) = 0.0_8
+         SLMSKW(I) = 0.0_8
+       ENDIF
+     ENDDO
+
+   ENDIF
+
    min_seaice = 0.15
    min_lakeice = 0.15
+   MIN_ICE = min_seaice
+
    PRINT*
    PRINT*,"CALL SFCCYCLE TO UPDATE SURFACE FIELDS."
    CALL SFCCYCLE(LUGB,LENSFC,LSOIL,SIG1T,DELTSFC,          &
                IY,IM,ID,IH,FH,RLA,RLO,                   &
-               SLMASK,OROG, OROG_UF, USE_UFO, DO_NSST,   &
+               SLMSKL,SLMSKW,OROG, OROG_UF, USE_UFO, DO_NSST,   &
                SIHFCS,SICFCS,SITFCS,SWDFCS,SLCFCS,       &
                VMNFCS,VMXFCS,SLPFCS,ABSFCS,              &
                TSFFCS,SNOFCS,ZORFCS,ALBFCS,TG3FCS,       &
@@ -499,7 +520,7 @@ ENDIF
                VEGFCS,VETFCS,SOTFCS,ALFFCS,              &
                CVFCS,CVBFCS,CVTFCS,MYRANK,num_threads, NLUNIT,        &
                SZ_NML, INPUT_NML_FILE,                   &
-               lake, min_lakeice, min_seaice, &
+               min_ice, &
                IALB,ISOT,IVEGSRC,TILE_NUM,I_INDEX,J_INDEX)
  ENDIF
 
