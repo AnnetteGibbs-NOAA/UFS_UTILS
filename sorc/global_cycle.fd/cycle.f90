@@ -357,7 +357,7 @@
                                       !! dead start. Set to zero for non-dead
                                       !! start.
  REAL, ALLOCATABLE   :: STC_BCK(:,:), SMC_BCK(:,:), SLC_BCK(:,:)
- REAL, ALLOCATABLE   :: SLIFCS_FG(:)
+ REAL, ALLOCATABLE   :: SLIFCS_FG(:), LAND_FRAC(:)
  INTEGER, ALLOCATABLE :: SOILSNOW_FG_MASK(:), SOILSNOW_MASK(:)
 
  TYPE(NSST_DATA)     :: NSST
@@ -386,11 +386,18 @@
  PRINT*
  PRINT*,'IN ROUTINE SFCDRV,IDIM=',IDIM,'JDIM=',JDIM,'FH=',FH
 
+ frac_grid = .true.
+
+ IF(FRAC_GRID) ALLOCATE(LAND_FRAC(LENSFC))
+
 !--------------------------------------------------------------------------------
 ! READ THE OROGRAPHY AND GRID POINT LAT/LONS FOR THE CUBED-SPHERE TILE.
 !--------------------------------------------------------------------------------
 
- CALL READ_LAT_LON_OROG(RLA,RLO,OROG,OROG_UF,TILE_NUM,IDIM,JDIM,LENSFC)
+ CALL READ_LAT_LON_OROG(RLA,RLO,OROG,OROG_UF,TILE_NUM,IDIM,JDIM,LENSFC,LAND_FRAC=LAND_FRAC)
+
+ print*,'got here land_frac ',maxval(land_frac),minval(land_frac)
+ stop
 
  DO I = 1, IDIM
    IDUM(I,:) = I
@@ -483,7 +490,6 @@ ENDIF
 ! UPDATE SURFACE FIELDS.
 !--------------------------------------------------------------------------------
 
- frac_grid = .false.
 
  IF (DO_SFCCYCLE) THEN
    num_threads = num_parthds()
