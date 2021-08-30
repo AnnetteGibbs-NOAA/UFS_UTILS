@@ -358,6 +358,7 @@
                                       !! start.
  REAL, ALLOCATABLE   :: STC_BCK(:,:), SMC_BCK(:,:), SLC_BCK(:,:)
  REAL, ALLOCATABLE   :: SLIFCS_FG(:), LAND_FRAC(:)
+ REAL, ALLOCATABLE   :: ZORLI(:), ZORLL(:), ZORLO(:)
  INTEGER, ALLOCATABLE :: SOILSNOW_FG_MASK(:), SOILSNOW_MASK(:)
 
  TYPE(NSST_DATA)     :: NSST
@@ -388,7 +389,12 @@
 
  frac_grid = .true.
 
- IF(FRAC_GRID) ALLOCATE(LAND_FRAC(LENSFC))
+ IF(FRAC_GRID) THEN
+   ALLOCATE(LAND_FRAC(LENSFC))
+   ALLOCATE(ZORLI(LENSFC))
+   ALLOCATE(ZORLL(LENSFC))
+   ALLOCATE(ZORLO(LENSFC))
+ ENDIF
 
 !--------------------------------------------------------------------------------
 ! READ THE OROGRAPHY AND GRID POINT LAT/LONS FOR THE CUBED-SPHERE TILE.
@@ -452,6 +458,16 @@ ENDIF
 ! READ THE INPUT SURFACE DATA ON THE CUBED-SPHERE TILE.
 !--------------------------------------------------------------------------------
 
+ IF(FRAC_GRID)THEN
+ CALL READ_DATA(TSFFCS,SMCFCS,SNOFCS,STCFCS,TG3FCS,ZORFCS,  &
+                CVFCS,CVBFCS,CVTFCS,ALBFCS,SLIFCS,          &
+                VEGFCS,CNPFCS,F10M,VETFCS,SOTFCS,           &
+                ALFFCS,USTAR,FMM,FHH,SIHFCS,SICFCS,         &
+                SITFCS,TPRCP,SRFLAG,SWDFCS,VMNFCS,          &
+                VMXFCS,SLCFCS,SLPFCS,ABSFCS,T2M,Q2M,        &
+                SLMASK,ZSOIL,LSOIL,LENSFC,DO_NSST,NSST,     &
+                ZORLI,ZORLL,ZORLO)
+ ELSE
  CALL READ_DATA(TSFFCS,SMCFCS,SNOFCS,STCFCS,TG3FCS,ZORFCS,  &
                 CVFCS,CVBFCS,CVTFCS,ALBFCS,SLIFCS,          &
                 VEGFCS,CNPFCS,F10M,VETFCS,SOTFCS,           &
@@ -459,6 +475,7 @@ ENDIF
                 SITFCS,TPRCP,SRFLAG,SWDFCS,VMNFCS,          &
                 VMXFCS,SLCFCS,SLPFCS,ABSFCS,T2M,Q2M,        &
                 SLMASK,ZSOIL,LSOIL,LENSFC,DO_NSST,NSST)
+ ENDIF
 
  IF (USE_UFO) THEN
    PRINT*
@@ -511,6 +528,14 @@ ENDIF
            SLMSKW(I) = 0.0_KIND_IO8
          ENDIF
        ENDIF
+       ZORFCS(I) = ZORLL(I)
+       IF (NINT(SLMSKL(I)) == 0) THEN
+         IF (SLMASK(I) > 1.99_KIND_IO8) then
+           ZORFCS(I) = ZORLI(I)
+         ELSE
+           ZORFCS(I) = ZORLO(I)
+         ENDIF
+       ENDIF
      ENDDO
 
      DEALLOCATE(LAND_FRAC)
@@ -528,8 +553,6 @@ ENDIF
      ENDDO
 
    ENDIF
-
-   stop 6
 
    min_seaice = 0.15
    min_lakeice = 0.15
@@ -549,7 +572,19 @@ ENDIF
                SZ_NML, INPUT_NML_FILE,                   &
                min_ice, &
                IALB,ISOT,IVEGSRC,TILE_NUM,I_INDEX,J_INDEX)
- ENDIF
+
+   DO I=1,LENSFC
+     ZORLL(I) = ZORFCS(I)
+     IF (NINT(SLMSKL(I)) == 0) THEN
+       IF (SLMASK(I) > 1.99_KIND_IO8) THEN
+         ZORLI(I) = ZORFCS(I)
+       ELSEIF (SLMASK(I) < 0.1_KIND_IO8) THEN
+         ZORLO(I) = ZORFCS(I)
+       ENDIF
+     ENDIF
+   ENDDO
+
+ ENDIF ! do_sfccycle
 
 !--------------------------------------------------------------------------------
 ! IF RUNNING WITH NSST, READ IN GSI FILE WITH THE UPDATED INCREMENTS (ON THE
