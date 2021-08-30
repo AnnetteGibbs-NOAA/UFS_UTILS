@@ -394,10 +394,13 @@
 ! READ THE OROGRAPHY AND GRID POINT LAT/LONS FOR THE CUBED-SPHERE TILE.
 !--------------------------------------------------------------------------------
 
- CALL READ_LAT_LON_OROG(RLA,RLO,OROG,OROG_UF,TILE_NUM,IDIM,JDIM,LENSFC,LAND_FRAC=LAND_FRAC)
+ IF(FRAC_GRID) THEN
+   CALL READ_LAT_LON_OROG(RLA,RLO,OROG,OROG_UF,TILE_NUM,IDIM,JDIM,LENSFC,LAND_FRAC=LAND_FRAC)
+   print*,'got here land_frac ',maxval(land_frac),minval(land_frac)
+ ELSE
+   CALL READ_LAT_LON_OROG(RLA,RLO,OROG,OROG_UF,TILE_NUM,IDIM,JDIM,LENSFC)
+ ENDIF
 
- print*,'got here land_frac ',maxval(land_frac),minval(land_frac)
- stop
 
  DO I = 1, IDIM
    IDUM(I,:) = I
@@ -494,21 +497,39 @@ ENDIF
  IF (DO_SFCCYCLE) THEN
    num_threads = num_parthds()
    IF (FRAC_GRID) THEN
-     print*,'frac grid not yet. '
-     stop 33
+
+     DO I=1,LENSFC
+       IF (LAND_FRAC(I) > 0.0_KIND_IO8) then
+         SLMSKL(I) = CEILING(LAND_FRAC(I)-1.0E-6_KIND_IO8)
+         SLMSKW(I) =   FLOOR(LAND_FRAC(I)+1.0E-6_KIND_IO8)
+       ELSE
+         IF (NINT(SLMASK(I)) == 1) THEN
+           SLMSKL(I) = 1.0_KIND_IO8
+           SLMSKW(I) = 1.0_KIND_IO8
+         ELSE
+           SLMSKL(I) = 0.0_KIND_IO8
+           SLMSKW(I) = 0.0_KIND_IO8
+         ENDIF
+       ENDIF
+     ENDDO
+
+     DEALLOCATE(LAND_FRAC)
+
    ELSE
 
      DO I=1,LENSFC
        IF (NINT(SLMASK(I)) == 1) THEN
-         SLMSKL(I) = 1.0_8
-         SLMSKW(I) = 1.0_8
+         SLMSKL(I) = 1.0_KIND_IO8
+         SLMSKW(I) = 1.0_KIND_IO8
        ELSE
-         SLMSKL(I) = 0.0_8
-         SLMSKW(I) = 0.0_8
+         SLMSKL(I) = 0.0_KIND_IO8
+         SLMSKW(I) = 0.0_KIND_IO8
        ENDIF
      ENDDO
 
    ENDIF
+
+   stop 6
 
    min_seaice = 0.15
    min_lakeice = 0.15
