@@ -327,6 +327,7 @@
  INTEGER             :: I_INDEX(LENSFC), J_INDEX(LENSFC)
  INTEGER             :: IDUM(IDIM,JDIM)
  integer             :: num_parthds, num_threads
+ integer :: icheck
 
  logical             :: frac_grid
  real(kind=kind_io8) :: min_seaice, min_lakeice, min_ice(lensfc)
@@ -364,6 +365,8 @@
  TYPE(NSST_DATA)     :: NSST
  real, dimension(idim,jdim) :: tf_clm,tf_trd,sal_clm
  real, dimension(lensfc)    :: tf_clm_tile,tf_trd_tile,sal_clm_tile
+
+ real :: txl,wfrac,txi,txo
 
  logical :: file_exists
 !--------------------------------------------------------------------------------
@@ -510,6 +513,23 @@ ENDIF
 ! UPDATE SURFACE FIELDS.
 !--------------------------------------------------------------------------------
 
+ do i=1,lensfc
+!  print*,'land frac ',i,land_frac(i)
+ enddo
+
+ if (frac_grid) then
+   icheck=98
+   print*,'check point land frac, ice c ',land_frac(icheck),sicfcs(icheck)
+   txl   = land_frac(icheck)            ! land fraction
+   wfrac = 1.0 - txl                     ! ocean fraction
+   txi   = sicfcs(icheck) * wfrac        ! txi = ice fraction wrt whole cell
+   txo   = max(0.0, wfrac-txi)          ! txo = open water fraction
+   print*,'check point txl wfrac txi txo ',txl, wfrac, txi, txo
+   print*,'check point zorli,zorlo,zorll,zorfcs ',zorli(icheck), &
+   zorlo(icheck),zorll(icheck),zorfcs(icheck)
+   print*,'check point computed zorfcs ',exp(txl*log(zorll(icheck)) + txi*log(zorli(icheck)) + txo*log(zorlo(icheck)))
+ endif
+ 
 
  IF (DO_SFCCYCLE) THEN
    num_threads = num_parthds()
@@ -538,7 +558,8 @@ ENDIF
        ENDIF
      ENDDO
 
-     DEALLOCATE(LAND_FRAC)
+     print*,'check before sfccycle zorfcs ',zorfcs(icheck)
+
 
    ELSE
 
@@ -573,16 +594,30 @@ ENDIF
                min_ice, &
                IALB,ISOT,IVEGSRC,TILE_NUM,I_INDEX,J_INDEX)
 
-   DO I=1,LENSFC
-     ZORLL(I) = ZORFCS(I)
-     IF (NINT(SLMSKL(I)) == 0) THEN
-       IF (SLMASK(I) > 1.99_KIND_IO8) THEN
-         ZORLI(I) = ZORFCS(I)
-       ELSEIF (SLMASK(I) < 0.1_KIND_IO8) THEN
-         ZORLO(I) = ZORFCS(I)
+     print*,'check after sfccycle zorfcs ',zorfcs(icheck)
+
+   IF(FRAC_GRID)THEN
+     DO I=1,LENSFC
+       ZORLL(I) = ZORFCS(I)
+       IF (NINT(SLMSKL(I)) == 0) THEN
+         IF (SLMASK(I) > 1.99_KIND_IO8) THEN
+           ZORLI(I) = ZORFCS(I)
+         ELSEIF (SLMASK(I) < 0.1_KIND_IO8) THEN
+           ZORLO(I) = ZORFCS(I)
+         ENDIF
        ENDIF
-     ENDIF
-   ENDDO
+ ! update based on new or melted ice.
+       txl   = land_frac(i)             ! land fraction
+       wfrac = 1.0 - txl                     ! ocean fraction
+       print*,'in loop i ',i
+       print*,'in loop sic ',sicfcs(i)
+       txi   = sicfcs(i) * wfrac        ! txi = ice fraction wrt whole cell
+       txo   = max(0.0, wfrac-txi)      ! txo = open water fraction
+       zorfcs(i)=exp(txl*log(zorll(i)) + txi*log(zorli(i)) + txo*log(zorlo(i)))
+     ENDDO
+     print*,'check after sfccycle zorll,zorli,zorlo,zorfcs ',zorll(icheck),zorli(icheck),zorlo(icheck),zorfcs(icheck)
+     DEALLOCATE(LAND_FRAC)
+   ENDIF
 
  ENDIF ! do_sfccycle
 
