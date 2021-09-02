@@ -72,6 +72,7 @@ mkdir -p $DATA
 
 for n in $(seq 1 $ntiles); do
 # ln -fs $COMIN/$PDY.${cyc}0000.sfc_data.tile${n}.nc      $DATA/fnbgsi.00$n
+# on dell  ln -fs /gpfs/dell2/emc/modeling/noscrub/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/cpld_control/RESTART/sfc_data.tile${n}.nc      $DATA/fnbgsi.00$n
   ln -fs /scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/cpld_control/RESTART/sfc_data.tile${n}.nc      $DATA/fnbgsi.00$n
 
   ln -fs $COMOUT/$PDY.${cyc}0000.sfcanl_data.tile${n}.nc  $DATA/fnbgso.00$n
@@ -79,6 +80,7 @@ for n in $(seq 1 $ntiles); do
   ln -fs $FIXfv3/C${CRES}/C${CRES}_grid.tile${n}.nc       $DATA/fngrid.00$n
 
 # ln -fs $FIXfv3/C${CRES}/C${CRES}_oro_data.tile${n}.nc   $DATA/fnorog.00$n
+# on dell  ln -fs /gpfs/dell2/emc/modeling/noscrub/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/C96_L64.mx100_frac/oro_data.tile${n}.nc   $DATA/fnorog.00$n
   ln -fs /scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/C96_L64.mx100_frac/oro_data.tile${n}.nc   $DATA/fnorog.00$n
 done
 

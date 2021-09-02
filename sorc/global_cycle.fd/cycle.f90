@@ -360,6 +360,8 @@
  REAL, ALLOCATABLE   :: STC_BCK(:,:), SMC_BCK(:,:), SLC_BCK(:,:)
  REAL, ALLOCATABLE   :: SLIFCS_FG(:), LAND_FRAC(:)
  REAL, ALLOCATABLE   :: ZORLI(:), ZORLL(:), ZORLO(:)
+ REAL, ALLOCATABLE   :: ALBDIFNIR_LND(:), ALBDIFVIS_LND(:), ALBDIRNIR_LND(:)
+ REAL, ALLOCATABLE   :: ALBDIRVIS_LND(:)
  INTEGER, ALLOCATABLE :: SOILSNOW_FG_MASK(:), SOILSNOW_MASK(:)
 
  TYPE(NSST_DATA)     :: NSST
@@ -397,6 +399,10 @@
    ALLOCATE(ZORLI(LENSFC))
    ALLOCATE(ZORLL(LENSFC))
    ALLOCATE(ZORLO(LENSFC))
+   ALLOCATE(ALBDIFNIR_LND(LENSFC))
+   ALLOCATE(ALBDIFVIS_LND(LENSFC))
+   ALLOCATE(ALBDIRNIR_LND(LENSFC))
+   ALLOCATE(ALBDIRVIS_LND(LENSFC))
  ENDIF
 
 !--------------------------------------------------------------------------------
@@ -469,7 +475,8 @@ ENDIF
                 SITFCS,TPRCP,SRFLAG,SWDFCS,VMNFCS,          &
                 VMXFCS,SLCFCS,SLPFCS,ABSFCS,T2M,Q2M,        &
                 SLMASK,ZSOIL,LSOIL,LENSFC,DO_NSST,NSST,     &
-                ZORLI,ZORLL,ZORLO)
+                ZORLI,ZORLL,ZORLO,ALBDIFNIR_LND,ALBDIFVIS_LND, &
+                ALBDIRNIR_LND,ALBDIRVIS_LND)
  ELSE
  CALL READ_DATA(TSFFCS,SMCFCS,SNOFCS,STCFCS,TG3FCS,ZORFCS,  &
                 CVFCS,CVBFCS,CVTFCS,ALBFCS,SLIFCS,          &
@@ -518,7 +525,9 @@ ENDIF
  enddo
 
  if (frac_grid) then
-   icheck=98
+!  icheck=98 ! this is a partial land point.
+!  icheck=4 ! this is all open water
+   icheck=97 ! this is all land
    print*,'check point land frac, ice c ',land_frac(icheck),sicfcs(icheck)
    txl   = land_frac(icheck)            ! land fraction
    wfrac = 1.0 - txl                     ! ocean fraction
@@ -528,6 +537,14 @@ ENDIF
    print*,'check point zorli,zorlo,zorll,zorfcs ',zorli(icheck), &
    zorlo(icheck),zorll(icheck),zorfcs(icheck)
    print*,'check point computed zorfcs ',exp(txl*log(zorll(icheck)) + txi*log(zorli(icheck)) + txo*log(zorlo(icheck)))
+   print*,'check point ALBDIFNIR_LND ALNWF ', ALBDIFNIR_LND(icheck), &
+                                              ALBFCS(icheck,4)
+   print*,'check point ALBDIFVIS_LND ALVWF ', ALBDIFVIS_LND(icheck), &
+                                              ALBFCS(icheck,2)
+   print*,'check point ALBDIRNIR_LND ALNSF ', ALBDIRNIR_LND(icheck), &
+                                              ALBFCS(icheck,3)
+   print*,'check point ALBDIRVIS_LND ALVSF ', ALBDIRVIS_LND(icheck), &
+                                              ALBFCS(icheck,1)
  endif
  
 
@@ -609,13 +626,23 @@ ENDIF
  ! update based on new or melted ice.
        txl   = land_frac(i)             ! land fraction
        wfrac = 1.0 - txl                     ! ocean fraction
-       print*,'in loop i ',i
-       print*,'in loop sic ',sicfcs(i)
+!      print*,'in loop i ',i
+!      print*,'in loop sic ',sicfcs(i)
        txi   = sicfcs(i) * wfrac        ! txi = ice fraction wrt whole cell
        txo   = max(0.0, wfrac-txi)      ! txo = open water fraction
        zorfcs(i)=exp(txl*log(zorll(i)) + txi*log(zorli(i)) + txo*log(zorlo(i)))
      ENDDO
      print*,'check after sfccycle zorll,zorli,zorlo,zorfcs ',zorll(icheck),zorli(icheck),zorlo(icheck),zorfcs(icheck)
+! after sfccycle, albedo will be updated at land, so need to update the "lnd"
+! variable. what about sea ice?
+     print*,'check after sfccycle ALBDIFNIR_LND ALNWF ', ALBDIFNIR_LND(icheck), &
+                                              ALBFCS(icheck,4)
+     print*,'check after sfccycle ALBDIFVIS_LND ALVWF ', ALBDIFVIS_LND(icheck), &
+                                              ALBFCS(icheck,2)
+     print*,'check after sfccycle ALBDIRNIR_LND ALNSF ', ALBDIRNIR_LND(icheck), &
+                                              ALBFCS(icheck,3)
+     print*,'check after sfccycle ALBDIRVIS_LND ALVSF ', ALBDIRVIS_LND(icheck), &
+                                              ALBFCS(icheck,1)
      DEALLOCATE(LAND_FRAC)
    ENDIF
 
