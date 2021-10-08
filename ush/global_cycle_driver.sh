@@ -53,6 +53,7 @@ fi
 export DO_SFCCYLE=${DO_SFCCYCLE:-".true."}
 export DO_LNDINC=${DO_LNDINC:-".false."}
 export LND_SOI_FILE=${LND_SOI_FILE:-"NULL"}
+export DO_SNO_INC=${DO_SNO_INC:-".false."}
 
 CRES=$(echo $CASE | cut -c 2-)
 JCAP_CASE=$((2*CRES-2))
@@ -82,6 +83,9 @@ for n in $(seq 1 $ntiles); do
 # ln -fs $FIXfv3/C${CRES}/C${CRES}_oro_data.tile${n}.nc   $DATA/fnorog.00$n
 # on dell  ln -fs /gpfs/dell2/emc/modeling/noscrub/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/C96_L64.mx100_frac/oro_data.tile${n}.nc   $DATA/fnorog.00$n
   ln -fs /scratch1/NCEPDEV/da/George.Gayno/ufs_utils.git/global_cycle_fraction/input_data.fractional/C96_L64.mx100_frac/oro_data.tile${n}.nc   $DATA/fnorog.00$n
+  if [[ "$DO_SNO_INC" == ".true." ]] ; then  
+        ln -fs $COMIN/$PDY.${cyc}0000.xainc.tile${n}.nc      $DATA/xainc.00$n
+  fi
 done
 
 $CYCLESH
