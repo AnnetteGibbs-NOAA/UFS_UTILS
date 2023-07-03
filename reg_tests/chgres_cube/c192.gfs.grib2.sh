@@ -17,7 +17,7 @@ export FIXfv3=${HOMEreg}/fix/C192
 export COMIN=${HOMEreg}/input_data/gfs.grib2
 
 export GRIB2_FILE_INPUT=gfs.t00z.pgrb2.0p50.f000
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l65.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l65.txt
 export VARMAP_FILE=${HOMEufs}/parm/varmap_tables/GFSphys_var_map.txt
 export INPUT_TYPE='grib2'
 export CONVERT_NST=".false."
@@ -67,6 +67,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< C192 GFS GRIB2 TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "c192_gfs_grib2" $commit_num
+  fi
 else
   echo "<<< C192 GFS GRIB2 TEST PASSED. >>>"
 fi

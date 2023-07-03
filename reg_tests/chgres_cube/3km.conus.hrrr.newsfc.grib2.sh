@@ -19,7 +19,7 @@ export FIXsfc=${FIXfv3}/fix_sfc
 export COMIN=${HOMEreg}/input_data/hrrr.grib2
 
 export GRIB2_FILE_INPUT=1921300000000
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 export VARMAP_FILE=${HOMEufs}/parm/varmap_tables/GSDphys_var_map.txt
 export INPUT_TYPE='grib2'
 export CONVERT_NST=".false."
@@ -30,15 +30,15 @@ export HALO_BNDY=4
 export CDATE=2019080100
 export EXTERNAL_MODEL="HRRR"
 export NSOILL_OUT=9
-export TRACERS_TARGET="NULL"
-export TRACERS_INPUT="NULL"
+export TRACERS_TARGET='"NULL"'
+export TRACERS_INPUT='"NULL"'
 export SOTYP_FROM_CLIMO=.false.
 export VGTYP_FROM_CLIMO=.false.
 export VGFRC_FROM_CLIMO=.false.
 export MINMAX_VGFRC_FROM_CLIMO=.false.
 export TG3_FROM_SOIL=.true.
 export LAI_FROM_CLIMO=.false.
-export GEOGRID_FILE_INPUT=${HOMEufs}/fix/fix_am/geo_em.d01.nc_HRRRX
+export GEOGRID_FILE_INPUT=${HOMEufs}/fix/am/geo_em.d01.nc_HRRRX
 
 export OMP_NUM_THREADS_CH=${OMP_NUM_THREADS:-1}
 
@@ -90,6 +90,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< 3-km CONUS HRRR W/ GSD PHYSICS AND SFC FROM FILE GRIB2 TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "3km_conus_hrrr_newsfc_grib2" $commit_num
+  fi
 else
   echo "<<< 3-km CONUS HRRR W/ GSD PHYSICS AND SFC FROM FILE GRIB2 TEST PASSED. >>>"
 fi

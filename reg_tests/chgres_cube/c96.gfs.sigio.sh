@@ -23,7 +23,7 @@ export COMIN=${HOMEreg}/input_data/gfs.sigio
 export ATM_FILES_INPUT=gdas.t00z.sanl
 export SFC_FILES_INPUT=gdas.t00z.sfcanl
 export CONVERT_NST='.false.'
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 export INPUT_TYPE="gfs_sigio"
 
 # dont start/end with double quotes
@@ -69,6 +69,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< C96 GFS SIGIO TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "c96_gfs_sigio" $commit_num
+  fi
 else
   echo "<<< C96 GFS SIGIO TEST PASSED. >>>"
 fi

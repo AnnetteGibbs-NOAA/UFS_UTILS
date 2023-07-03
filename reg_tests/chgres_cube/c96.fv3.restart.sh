@@ -14,7 +14,7 @@ rm -fr $DATA
 
 export FIXfv3=${HOMEreg}/fix/C96
 export COMIN=${HOMEreg}/input_data/fv3.restart
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 export INPUT_TYPE='restart'
 export MOSAIC_FILE_INPUT_GRID="${HOMEreg}/fix/C384/C384_mosaic.nc"
 export OROG_DIR_INPUT_GRID=${HOMEreg}/fix/C384
@@ -73,6 +73,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< C96 FV3 RESTART TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "c96_fv3_restart" $commit_num
+  fi
 else
   echo "<<< C96 FV3 RESTART TEST PASSED. >>>"
 fi

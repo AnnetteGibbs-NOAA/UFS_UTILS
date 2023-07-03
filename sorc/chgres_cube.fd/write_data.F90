@@ -1,3 +1,17 @@
+ module write_data
+
+ use utilities, only              : error_handler, netcdf_err
+
+ private
+
+ public :: write_fv3_atm_header_netcdf
+ public :: write_fv3_atm_bndy_data_netcdf
+ public :: write_fv3_atm_data_netcdf
+ public :: write_fv3_sfc_data_netcdf
+ public :: write_fv3_atm_warm_restart
+
+ contains
+
 !> @file
 !! @brief Writes the tiled and header files expected by the forecast
 !! model.
@@ -18,9 +32,9 @@
 
  use netcdf
 
- use atmosphere, only : nvcoord_target, &
-                        vcoord_target,  &
-                        levp1_target
+ use atmosphere_target_data, only : nvcoord_target, &
+                                    vcoord_target,  &
+                                    levp1_target
 
  use program_setup, only : num_tracers, use_thomp_mp_climo
 
@@ -30,7 +44,6 @@
 
  character(len=13)   :: outfile
 
- integer             :: fsize=65536, initial = 0
  integer             :: header_buffer_val = 16384
  integer             :: error, ncid, dim_nvcoord
  integer             :: dim_levp1, id_ntrac, id_vcoord
@@ -44,8 +57,7 @@
 
  print*,"- WRITE ATMOSPHERIC HEADER FILE: ", trim(outfile)
 
- error = nf90_create(outfile, IOR(NF90_NETCDF4,NF90_CLASSIC_MODEL), &
-                     ncid, initialsize=initial, chunksize=fsize)
+ error = nf90_create(outfile, NF90_NETCDF4, ncid)
  call netcdf_err(error, 'CREATING FILE='//trim(outfile) )
 
  error = nf90_def_dim(ncid, 'nvcoord', nvcoord_target, dim_nvcoord)
@@ -105,18 +117,12 @@
  use esmf
  use netcdf
 
- use atmosphere, only            : lev_target, levp1_target, &
-                                   dzdt_target_grid, &
-                                   ps_target_grid, &
-                                   tracers_target_grid, &
-                                   u_s_target_grid, &
-                                   v_s_target_grid, &
-                                   u_w_target_grid, &
-                                   v_w_target_grid, &
-                                   temp_target_grid, &
-                                   zh_target_grid, &
-                                   qnifa_climo_target_grid, &
-                                   qnwfa_climo_target_grid
+ use atmosphere_target_data, only : lev_target, levp1_target, &
+                                    ps_target_grid, zh_target_grid, &
+                                    tracers_target_grid, dzdt_target_grid, &
+                                    temp_target_grid, qnifa_climo_target_grid, &
+                                    qnwfa_climo_target_grid, u_s_target_grid, &
+                                    v_s_target_grid, u_w_target_grid, v_w_target_grid
 
  use model_grid, only            : i_target, ip1_target, j_target, jp1_target
 
@@ -130,7 +136,6 @@
 
  character(len=50)              :: name
 
- integer                        :: fsize=65536, initial = 0
  integer                        :: header_buffer_val = 16384
  integer                        :: ncid, error, tile, i, n
  integer                        :: dim_lon, dim_lat
@@ -202,8 +207,7 @@
  if (localpet == 0) then
 
 !--- open the file
-   error = nf90_create("./gfs.bndy.nc", IOR(NF90_NETCDF4,NF90_CLASSIC_MODEL), &
-                     ncid, initialsize=initial, chunksize=fsize)
+   error = nf90_create("./gfs.bndy.nc", NF90_NETCDF4, ncid)
    call netcdf_err(error, 'CREATING BNDY FILE' )
 
    error = nf90_def_dim(ncid, 'lon', i_target, dim_lon)
@@ -658,16 +662,16 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum2d_top(:,:) = data_one_tile(i_start_top:i_end_top, j_start_top:j_end_top)
+   dum2d_top(:,:) = real(data_one_tile(i_start_top:i_end_top, j_start_top:j_end_top),kind=4)
    error = nf90_put_var( ncid, id_ps_top, dum2d_top)
    call netcdf_err(error, 'WRITING PS TOP' )
-   dum2d_bottom(:,:) = data_one_tile(i_start_bottom:i_end_bottom, j_start_bottom:j_end_bottom)
+   dum2d_bottom(:,:) = real(data_one_tile(i_start_bottom:i_end_bottom, j_start_bottom:j_end_bottom),kind=4)
    error = nf90_put_var( ncid, id_ps_bottom, dum2d_bottom)
    call netcdf_err(error, 'WRITING PS BOTTOM' )
-   dum2d_left(:,:) = data_one_tile(i_start_left:i_end_left, j_start_left:j_end_left)
+   dum2d_left(:,:) = real(data_one_tile(i_start_left:i_end_left, j_start_left:j_end_left),kind=4)
    error = nf90_put_var( ncid, id_ps_left, dum2d_left)
    call netcdf_err(error, 'WRITING PS LEFT' )
-   dum2d_right(:,:) = data_one_tile(i_start_right:i_end_right, j_start_right:j_end_right)
+   dum2d_right(:,:) = real(data_one_tile(i_start_right:i_end_right, j_start_right:j_end_right),kind=4)
    error = nf90_put_var( ncid, id_ps_right, dum2d_right)
    call netcdf_err(error, 'WRITING PS RIGHT' )
  endif
@@ -696,19 +700,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:levp1_target) = dum3d_top(:,:,levp1_target:1:-1) 
    error = nf90_put_var( ncid, id_zh_top, dum3d_top)
    call netcdf_err(error, 'WRITING ZH TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:levp1_target) = dum3d_bottom(:,:,levp1_target:1:-1) 
    error = nf90_put_var( ncid, id_zh_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING ZH BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:levp1_target) = dum3d_left(:,:,levp1_target:1:-1) 
    error = nf90_put_var( ncid, id_zh_left, dum3d_left)
    call netcdf_err(error, 'WRITING ZH LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:levp1_target) = dum3d_right(:,:,levp1_target:1:-1) 
    error = nf90_put_var( ncid, id_zh_right, dum3d_right)
    call netcdf_err(error, 'WRITING ZH RIGHT' )
@@ -740,19 +744,19 @@
         call error_handler("IN FieldGather", error)
 
    if (localpet == 0) then
-     dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+     dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
      dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_tracer_top(n), dum3d_top)
      call netcdf_err(error, 'WRITING TRACER TOP' )
-     dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+     dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
      dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_tracer_bottom(n), dum3d_bottom)
      call netcdf_err(error, 'WRITING TRACER BOTTOM' )
-     dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+     dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
      dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_tracer_left(n), dum3d_left)
      call netcdf_err(error, 'WRITING TRACER LEFT' )
-     dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+     dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
      dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_tracer_right(n), dum3d_right)
      call netcdf_err(error, 'WRITING TRACER RIGHT' )
@@ -768,19 +772,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_w_top, dum3d_top)
    call netcdf_err(error, 'WRITING W TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_w_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING W BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_w_left, dum3d_left)
    call netcdf_err(error, 'WRITING W LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_w_right, dum3d_right)
    call netcdf_err(error, 'WRITING W RIGHT' )
@@ -794,19 +798,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_t_top, dum3d_top)
    call netcdf_err(error, 'WRITING T TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_t_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING T BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_t_left, dum3d_left)
    call netcdf_err(error, 'WRITING T LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_t_right, dum3d_right)
    call netcdf_err(error, 'WRITING T RIGHT' )
@@ -820,19 +824,19 @@
         call error_handler("IN FieldGather", error)
 
    if (localpet == 0) then
-     dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+     dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
      dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnifa_top, dum3d_top)
      call netcdf_err(error, 'WRITING QNIFA CLIMO TOP' )
-     dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+     dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
      dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnifa_bottom, dum3d_bottom)
      call netcdf_err(error, 'WRITING QNIFA CLIMO BOTTOM' )
-     dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+     dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
      dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnifa_left, dum3d_left)
      call netcdf_err(error, 'WRITING QNIFA CLIMO LEFT' )
-     dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+     dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
      dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnifa_right, dum3d_right)
      call netcdf_err(error, 'WRITING QNIFA CLIMO RIGHT' )
@@ -844,19 +848,19 @@
         call error_handler("IN FieldGather", error)
 
    if (localpet == 0) then
-     dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+     dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
      dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnwfa_top, dum3d_top)
      call netcdf_err(error, 'WRITING QNWFA CLIMO TOP' )
-     dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+     dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
      dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnwfa_bottom, dum3d_bottom)
      call netcdf_err(error, 'WRITING QNWFA CLIMO BOTTOM' )
-     dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+     dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
      dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnwfa_left, dum3d_left)
      call netcdf_err(error, 'WRITING QNWFA CLIMO LEFT' )
-     dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+     dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
      dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
      error = nf90_put_var( ncid, id_qnwfa_right, dum3d_right)
      call netcdf_err(error, 'WRITING QNWFA CLIMO RIGHT' )
@@ -976,19 +980,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_s_top, dum3d_top)
    call netcdf_err(error, 'WRITING U_S TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_s_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING U_S BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_s_left, dum3d_left)
    call netcdf_err(error, 'WRITING U_S LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_s_right, dum3d_right)
    call netcdf_err(error, 'WRITING U_S RIGHT' )
@@ -1002,19 +1006,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_s_top, dum3d_top)
    call netcdf_err(error, 'WRITING V_S TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_s_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING V_S BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_s_left, dum3d_left)
    call netcdf_err(error, 'WRITING V_S LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_s_right, dum3d_right)
    call netcdf_err(error, 'WRITING V_S RIGHT' )
@@ -1132,19 +1136,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_w_top, dum3d_top)
    call netcdf_err(error, 'WRITING U_W TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_w_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING U_W BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_w_left, dum3d_left)
    call netcdf_err(error, 'WRITING U_W LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_u_w_right, dum3d_right)
    call netcdf_err(error, 'WRITING U_W RIGHT' )
@@ -1158,19 +1162,19 @@
       call error_handler("IN FieldGather", error)
 
  if (localpet == 0) then
-   dum3d_top(:,:,:) = data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:)
+   dum3d_top(:,:,:) = real(data_one_tile_3d(i_start_top:i_end_top,j_start_top:j_end_top,:),kind=4)
    dum3d_top(:,:,1:lev_target) = dum3d_top(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_w_top, dum3d_top)
    call netcdf_err(error, 'WRITING V_W TOP' )
-   dum3d_bottom(:,:,:) = data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:)
+   dum3d_bottom(:,:,:) = real(data_one_tile_3d(i_start_bottom:i_end_bottom,j_start_bottom:j_end_bottom,:),kind=4)
    dum3d_bottom(:,:,1:lev_target) = dum3d_bottom(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_w_bottom, dum3d_bottom)
    call netcdf_err(error, 'WRITING V_W BOTTOM' )
-   dum3d_left(:,:,:) = data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:)
+   dum3d_left(:,:,:) = real(data_one_tile_3d(i_start_left:i_end_left,j_start_left:j_end_left,:),kind=4)
    dum3d_left(:,:,1:lev_target) = dum3d_left(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_w_left, dum3d_left)
    call netcdf_err(error, 'WRITING V_W LEFT' )
-   dum3d_right(:,:,:) = data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:)
+   dum3d_right(:,:,:) = real(data_one_tile_3d(i_start_right:i_end_right,j_start_right:j_end_right,:),kind=4)
    dum3d_right(:,:,1:lev_target) = dum3d_right(:,:,lev_target:1:-1) 
    error = nf90_put_var( ncid, id_v_w_right, dum3d_right)
    call netcdf_err(error, 'WRITING V_W RIGHT' )
@@ -1192,7 +1196,7 @@
  use esmf
  use netcdf
 
- use atmosphere, only              : lev_target, &
+ use atmosphere_target_data, only  : lev_target, &
                                      levp1_target, &
                                      tracers_target_grid, &
                                      temp_target_grid, &
@@ -1346,8 +1350,9 @@
      call netcdf_err(error, 'DEFINING TRACERS' )
    enddo
 
-   error = nf90_def_var(ncid, 'cld_amt', NF90_FLOAT, (/dim_x,dim_y,dim_z,dim_time/), id_cld)
-   call netcdf_err(error, 'DEFINING TRACERS' )
+! I think we need to remove this, not sure why it was added in the first place - AMG
+!  error = nf90_def_var(ncid, 'cld_amt', NF90_FLOAT, (/dim_x,dim_y,dim_z,dim_time/), id_cld)
+!  call netcdf_err(error, 'DEFINING TRACERS' )
 
    error = nf90_enddef(ncid, header_buffer_val,4,0,4)
    call netcdf_err(error, 'DEFINING HEADER' )
@@ -1392,11 +1397,12 @@
 
  enddo
 
-   if (localpet < num_tiles_target_grid) then
-     dum3d = 0.0
-     error = nf90_put_var( ncid, id_cld, dum3d)
-     call netcdf_err(error, 'WRITING CLD AMT RECORD' )
-   endif
+! I think we need to remove this, not sure why it was added in the first place - AMG
+!  if (localpet < num_tiles_target_grid) then
+!    dum3d = 0.0
+!    error = nf90_put_var( ncid, id_cld, dum3d)
+!    call netcdf_err(error, 'WRITING CLD AMT RECORD' )
+!  endif
 
  deallocate(id_tracers)
  deallocate(x_data, y_data, z_data)
@@ -1684,20 +1690,13 @@
                                      use_thomp_mp_climo, &
                                      regional
 
- use atmosphere, only              : lev_target, &
-                                     levp1_target, &
-                                     ps_target_grid, &
-                                     zh_target_grid, &
-                                     dzdt_target_grid, &
-                                     qnifa_climo_target_grid, &
-                                     qnwfa_climo_target_grid, &
-                                     tracers_target_grid, &
-                                     temp_target_grid, &
-                                     delp_target_grid, &
-                                     u_s_target_grid,   &
-                                     v_s_target_grid,   &
-                                     u_w_target_grid,   &
-                                     v_w_target_grid
+ use atmosphere_target_data, only  : lev_target, levp1_target, &
+                                     ps_target_grid, zh_target_grid, &
+                                     dzdt_target_grid, delp_target_grid, &
+                                     temp_target_grid, tracers_target_grid, &
+                                     qnifa_climo_target_grid, qnwfa_climo_target_grid, &
+                                     u_s_target_grid, v_s_target_grid, &
+                                     u_w_target_grid, v_w_target_grid
 
  use model_grid, only              : num_tiles_target_grid, &
                                      i_target, j_target, &
@@ -1716,7 +1715,6 @@
  character(len=128)               :: outfile
 
  integer                          :: error, ncid, tile, n
- integer                          :: fsize=65536, initial = 0
  integer                          :: header_buffer_val = 16384
  integer                          :: dim_lon, dim_lat
  integer                          :: dim_lonp, dim_latp
@@ -1774,8 +1772,7 @@
    endif
 
 !--- open the file
-   error = nf90_create(outfile, IOR(NF90_NETCDF4,NF90_CLASSIC_MODEL), &
-                       ncid, initialsize=initial, chunksize=fsize)
+   error = nf90_create(outfile, NF90_NETCDF4, ncid)
    call netcdf_err(error, 'CREATING FILE='//trim(outfile) )
 
 !--- define dimension
@@ -1936,7 +1933,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:i_end, j_start:j_end)
+   dum2d(:,:) = real(data_one_tile(i_start:i_end, j_start:j_end),kind=4)
    error = nf90_put_var( ncid, id_lon, dum2d)
    call netcdf_err(error, 'WRITING LONGITUDE RECORD' )
  endif
@@ -1951,7 +1948,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:i_end, j_start:j_end)
+   dum2d(:,:) = real(data_one_tile(i_start:i_end, j_start:j_end),kind=4)
    error = nf90_put_var( ncid, id_lat, dum2d)
    call netcdf_err(error, 'WRITING LATITUDE RECORD' )
  endif
@@ -1966,7 +1963,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:i_end, j_start:j_end)
+   dum2d(:,:) = real(data_one_tile(i_start:i_end, j_start:j_end),kind=4)
    error = nf90_put_var( ncid, id_ps, dum2d)
    call netcdf_err(error, 'WRITING SURFACE PRESSURE RECORD' )
  endif
@@ -1991,7 +1988,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:levp1_target) = dum3d(:,:,levp1_target:1:-1)
    error = nf90_put_var( ncid, id_zh, dum3d)
    call netcdf_err(error, 'WRITING HEIGHT RECORD' )
@@ -2017,7 +2014,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    print*,"MIN MAX W AT WRITE = ", minval(dum3d(:,:,:)), maxval(dum3d(:,:,:))
    error = nf90_put_var( ncid, id_w, dum3d)
@@ -2034,7 +2031,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    error = nf90_put_var( ncid, id_delp, dum3d)
    call netcdf_err(error, 'WRITING DELP RECORD' )
@@ -2050,7 +2047,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    error = nf90_put_var( ncid, id_t, dum3d)
    call netcdf_err(error, 'WRITING TEMPERTAURE RECORD' )
@@ -2068,7 +2065,7 @@
    enddo
 
    if (localpet < num_tiles_target_grid) then
-     dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+     dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
      dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
      error = nf90_put_var( ncid, id_tracers(n), dum3d)
      call netcdf_err(error, 'WRITING TRACER RECORD' )
@@ -2087,7 +2084,7 @@
    enddo
 
    if (localpet < num_tiles_target_grid) then
-     dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+     dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
      dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
      error = nf90_put_var( ncid, id_qnifa, dum3d)
      call netcdf_err(error, 'WRITING QNIFA RECORD' )
@@ -2103,7 +2100,7 @@
    enddo
 
    if (localpet < num_tiles_target_grid) then
-     dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:j_end,:)
+     dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:j_end,:),kind=4)
      dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
      error = nf90_put_var( ncid, id_qnwfa, dum3d)
      call netcdf_err(error, 'WRITING QNWFA RECORD' )
@@ -2130,7 +2127,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:i_end,j_start:jp1_end)
+   dum2d(:,:) = real(data_one_tile(i_start:i_end,j_start:jp1_end),kind=4)
    error = nf90_put_var( ncid, id_lon_s, dum2d)
    call netcdf_err(error, 'WRITING LON_S RECORD' )
  endif
@@ -2143,7 +2140,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:i_end,j_start:jp1_end)
+   dum2d(:,:) = real(data_one_tile(i_start:i_end,j_start:jp1_end),kind=4)
    error = nf90_put_var( ncid, id_lat_s, dum2d)
    call netcdf_err(error, 'WRITING LAT_S RECORD' )
  endif
@@ -2168,7 +2165,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:jp1_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:jp1_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    print*,"MIN MAX US AT WRITE = ", minval(dum3d(:,:,:)), maxval(dum3d(:,:,:))
    error = nf90_put_var( ncid, id_u_s, dum3d)
@@ -2185,7 +2182,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:i_end,j_start:jp1_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:i_end,j_start:jp1_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    print*,"MIN MAX VS AT WRITE = ", minval(dum3d(:,:,:)), maxval(dum3d(:,:,:))
    error = nf90_put_var( ncid, id_v_s, dum3d)
@@ -2212,7 +2209,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:ip1_end,j_start:j_end)
+   dum2d(:,:) = real(data_one_tile(i_start:ip1_end,j_start:j_end),kind=4)
    error = nf90_put_var( ncid, id_lon_w, dum2d)
    call netcdf_err(error, 'WRITING LON_W RECORD' )
  endif
@@ -2225,7 +2222,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum2d(:,:) = data_one_tile(i_start:ip1_end,j_start:j_end)
+   dum2d(:,:) = real(data_one_tile(i_start:ip1_end,j_start:j_end),kind=4)
    error = nf90_put_var( ncid, id_lat_w, dum2d)
    call netcdf_err(error, 'WRITING LAT_W RECORD' )
  endif
@@ -2250,7 +2247,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:ip1_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:ip1_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    print*,"MIN MAX UW AT WRITE = ", minval(dum3d(:,:,:)), maxval(dum3d(:,:,:))
    error = nf90_put_var( ncid, id_u_w, dum3d)
@@ -2267,7 +2264,7 @@
  enddo
 
  if (localpet < num_tiles_target_grid) then
-   dum3d(:,:,:) = data_one_tile_3d(i_start:ip1_end,j_start:j_end,:)
+   dum3d(:,:,:) = real(data_one_tile_3d(i_start:ip1_end,j_start:j_end,:),kind=4)
    dum3d(:,:,1:lev_target) = dum3d(:,:,lev_target:1:-1)
    print*,"MIN MAX VW AT WRITE = ", minval(dum3d(:,:,:)), maxval(dum3d(:,:,:))
    error = nf90_put_var( ncid, id_v_w, dum3d)
@@ -2302,7 +2299,7 @@
  use program_setup, only         : convert_nst, halo=>halo_bndy, &
                                    regional, lai_from_climo
 
- use surface, only               : canopy_mc_target_grid,  &
+ use surface_target_data, only   : canopy_mc_target_grid,  &
                                    f10m_target_grid, &
                                    ffhh_target_grid, &
                                    ffmm_target_grid, &
@@ -2361,7 +2358,6 @@
  integer, intent(in)            :: localpet
  character(len=128)             :: outfile
 
- integer                        :: fsize=65536, initial = 0
  integer                        :: header_buffer_val = 16384
  integer                        :: dim_x, dim_y, dim_lsoil, dim_time
  integer                        :: error, i, ncid, tile
@@ -2413,17 +2409,17 @@
 
  allocate(lsoil_data(lsoil_target))
  do i = 1, lsoil_target
-   lsoil_data(i) = float(i)
+   lsoil_data(i) = real(float(i),kind=4)
  enddo
 
  allocate(x_data(i_target_out))
  do i = 1, i_target_out
-   x_data(i) = float(i)
+   x_data(i) = real(float(i),kind=4)
  enddo
 
  allocate(y_data(j_target_out))
  do i = 1, j_target_out
-   y_data(i) = float(i)
+   y_data(i) = real(float(i),kind=4)
  enddo
 
  if (convert_nst) then
@@ -2457,8 +2453,7 @@
      endif
 
 !--- open the file
-     error = nf90_create(outfile, IOR(NF90_NETCDF4,NF90_CLASSIC_MODEL), &
-                         ncid, initialsize=initial, chunksize=fsize)
+     error = nf90_create(outfile, NF90_NETCDF4, ncid)
      call netcdf_err(error, 'CREATING FILE='//trim(outfile) )
 
 !--- define dimensions
@@ -3657,6 +3652,7 @@
         call error_handler("IN FieldGather", error)
 
      if (localpet == 0) then
+!      print*,'write zm max/min ',maxval(data_one_tile),minval(data_one_tile)
        dum2d(:,:) = data_one_tile(istart:iend, jstart:jend)
        error = nf90_put_var( ncid, id_zm, dum2d, start=(/1,1,1/), count=(/i_target_out,j_target_out,1/))
        call netcdf_err(error, 'WRITING ZM RECORD' )
@@ -3678,3 +3674,5 @@
  return
 
  end subroutine write_fv3_sfc_data_netcdf
+
+ end module write_data

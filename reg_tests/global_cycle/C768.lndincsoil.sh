@@ -36,7 +36,7 @@ export JCAP=1534
 export LONB=3072
 export LATB=1536
 
-export FIXgsm=$BASE_GSM/fix/fix_am
+export FIXgsm=$BASE_GSM/fix/am
 
 export DONST="NO"
 export use_ufo=.true.
@@ -77,6 +77,9 @@ if [ $test_failed -ne 0 ]; then
   echo "*****************************************"
   echo "<<< C768 LANDINC SOILT CYCLE TEST FAILED. >>>"
   echo "*****************************************"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $BASE_GSM/reg_tests/update_baseline.sh $HOMEreg "c768.lndincsoil" $commit_num
+  fi
 else
   echo
   echo "*****************************************"

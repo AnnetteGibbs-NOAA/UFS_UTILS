@@ -19,11 +19,11 @@ export FIXsfc=${FIXfv3}/fix_sfc
 export COMIN=${HOMEreg}/input_data/gfs.grib2
 
 export GRIB2_FILE_INPUT=gfs.t00z.pgrb2.0p50.f000
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 export VARMAP_FILE=${HOMEufs}/parm/varmap_tables/GSDphys_noaero_var_map.txt
 export INPUT_TYPE='grib2'
 export CONVERT_NST=".false."
-export THOMPSON_AEROSOL_FILE=${HOMEufs}/fix/fix_am/Thompson_MP_MONTHLY_CLIMO.nc
+export THOMPSON_AEROSOL_FILE=${HOMEufs}/fix/am/Thompson_MP_MONTHLY_CLIMO.nc
 export OROG_FILES_TARGET_GRID="C403_oro_data.tile7.halo4.nc"
 export REGIONAL=1
 export HALO_BLEND=0
@@ -80,6 +80,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< 25-KM CONUS GFS GRIB2 TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "25km_conus_gfs_grib2" $commit_num
+  fi
 else
   echo "<<< 25-KM CONUS GFS GRIB2 TEST PASSED. >>>"
 fi

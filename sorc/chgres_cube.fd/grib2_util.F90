@@ -17,9 +17,10 @@ use model_grid, only      : i_input, j_input
 
 implicit none
 
+public :: rh2spfh
+public :: convert_omega
 public :: rh2spfh_gfs
 public :: fpvsnew 
-
 
 contains 
 
@@ -28,7 +29,7 @@ contains
 !> Brock and Richardson 2001 (Meterological Measurement 
 !> Systems, p. 86, equation 5.1) 
 !!
-!! @param[inout] rh_sphum rel humidity on input. spec hum on output.
+!! @param[inout] rh_sphum rel humidity (%) on input. spec hum (kg/kg) on output.
 !! @param[in] p pressure in Pa
 !! @param[in] t temperature
 !! @author Larissa Reames
@@ -55,11 +56,11 @@ contains
   !print *, 'es = ', es
   e = rh * es / 100.0
   !print *, 'e = ', e
-  rh_sphum = 0.622 * e / p
+  rh_sphum = real((0.622 * e / p),kind=esmf_kind_r4)
   !print *, 'q = ', sphum
   
   !if (P .eq. 100000.0) THEN
-  ! print *, 'T = ', T, ' RH = ', RH, ' P = ', P, ' es = ', es, ' e = ', e, ' q = ', sphum
+  !print *, 'T = ', t, ' RH = ', rh, ' P = ', p, ' es = ', es, ' e = ', e, ' q = ', rh_sphum
   !end if
 
 end subroutine RH2SPFH
@@ -109,7 +110,7 @@ do j=1,j_input
   do i=1,i_input
     ES = MIN(FPVSNEW(T(I,J)),P)
     QC(i,j) = CON_EPS*ES/(P+CON_EPSM1*ES)
-    rh_sphum(i,j) = rh(i,j)*QC(i,j)/100.0
+    rh_sphum(i,j) = real((rh(i,j)*QC(i,j)/100.0),kind=esmf_kind_r4)
   end do
 end do
 
@@ -168,7 +169,7 @@ end subroutine RH2SPFH_GFS
       c1xpvs=1.-xmin*c2xpvs
 !    xj=min(max(c1xpvs+c2xpvs*t,1.0),real(nxpvs,krealfp))
       xj=min(max(c1xpvs+c2xpvs*t,1.0),float(nxpvs))
-      jx=min(xj,float(nxpvs)-1.0)
+      jx=int(min(xj,float(nxpvs)-1.0))
       x=xmin+(jx-1)*xinc
 
       tr=con_ttp/x

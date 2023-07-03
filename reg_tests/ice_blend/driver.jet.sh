@@ -31,7 +31,11 @@ set -x
 source ../../sorc/machine-setup.sh > /dev/null 2>&1
 module use ../../modulefiles
 module load build.$target.intel
+module load gnu/9.2.0
+module load wgrib2/3.1.1_ncep
+set +x
 module list
+set -x
 
 export DATA="${WORK_DIR:-/lfs4/HFIP/emcda/$LOGNAME/stmp}"
 export DATA="${DATA}/reg-tests/ice-blend"
@@ -40,13 +44,21 @@ export DATA="${DATA}/reg-tests/ice-blend"
 # Should not have to change anything below.
 #-----------------------------------------------------------------------------
 
+export UPDATE_BASELINE="FALSE"
+#export UPDATE_BASELINE="TRUE"
+
+if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+  source ../get_hash.sh
+fi
+
 export WGRIB=/apps/wgrib/1.8.1.0b/bin/wgrib
-export WGRIB2=/apps/wgrib2/0.1.9.6a/bin/wgrib2
-export COPYGB=/lfs4/HFIP/emcda/George.Gayno/ufs_utils.git/jet_port/grib_util/copygb
-export COPYGB2=/lfs4/HFIP/emcda/George.Gayno/ufs_utils.git/jet_port/grib_util/copygb2
+export WGRIB2=${WGRIB2_ROOT}/bin/wgrib2
+export COPYGB=/lfs4/HFIP/hfv3gfs/emc.nemspara/role.ufsutils/ufs_utils/grib_util/NCEPLIBS-grib_util/exec/bin/copygb
+export COPYGB2=/lfs4/HFIP/hfv3gfs/emc.nemspara/role.ufsutils/ufs_utils/grib_util/NCEPLIBS-grib_util/exec/bin/copygb2
 export CNVGRIB=/apps/cnvgrib/1.4.0/bin/cnvgrib
 
-export HOMEreg=/lfs4/HFIP/emcda/George.Gayno/reg_tests/ice_blend
+export HOMEreg=/lfs4/HFIP/hfv3gfs/emc.nemspara/role.ufsutils/ufs_utils/reg_tests/ice_blend
+
 export HOMEgfs=$PWD/../..
 
 rm -fr $DATA

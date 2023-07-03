@@ -16,7 +16,7 @@ export FIXfv3=${HOMEreg}/fix/C96
 export COMIN=${HOMEreg}/input_data/fv3.nemsio
 export ATM_FILES_INPUT=gfs.t12z.atmf000.nemsio
 export SFC_FILES_INPUT=gfs.t12z.sfcf000.nemsio
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 
 export CDATE=2019070412
 
@@ -63,6 +63,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< C96 FV3 GAUSSIAN NEMSIO TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "c96_fv3_nemsio" $commit_num
+  fi
 else
   echo "<<< C96 FV3 GAUSSIAN NEMSIO TEST PASSED. >>>"
 fi

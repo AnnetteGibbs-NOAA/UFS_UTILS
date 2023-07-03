@@ -19,7 +19,7 @@ export FIXsfc=${FIXfv3}/fix_sfc
 export COMIN=${HOMEreg}/input_data/nam.grib2
 
 export GRIB2_FILE_INPUT=nam_218_20200801_0000_000.grb2
-export VCOORD_FILE=${HOMEufs}/fix/fix_am/global_hyblev.l64.txt
+export VCOORD_FILE=${HOMEufs}/fix/am/global_hyblev.l64.txt
 export VARMAP_FILE=${HOMEufs}/parm/varmap_tables/GFSphys_var_map.txt
 export INPUT_TYPE='grib2'
 export CONVERT_NST=".false."
@@ -82,6 +82,9 @@ done
 set +x
 if [ $test_failed -ne 0 ]; then
   echo "<<< 13-KM CONUS NAM GRIB2 TEST FAILED. >>>"
+  if [ "$UPDATE_BASELINE" = "TRUE" ]; then
+    $HOMEufs/reg_tests/update_baseline.sh $HOMEreg "13km_conus_nam_grib2" $commit_num
+  fi
 else
   echo "<<< 13-KM CONUS NAM GRIB2 TEST PASSED. >>>"
 fi
